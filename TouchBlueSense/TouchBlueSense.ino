@@ -3,21 +3,22 @@
 BLESense gBLESense;
 time_t gLastTime = 0;
 
-void setup() {
+void setup()
+{
   Serial.begin(9600);
-  //while (!Serial);
- 
+  // while (!Serial);
+
   // set LED pin to output mode
   pinMode(LEDR, OUTPUT);
   pinMode(LEDG, OUTPUT);
   pinMode(LEDB, OUTPUT);
 
-  digitalWrite(LEDR, LOW);  // turn the LED on
-  digitalWrite(LEDG, LOW);  // turn the LED on
-  digitalWrite(LEDB, LOW);  // turn the LED on
+  digitalWrite(LEDR, LOW); // turn the LED on
+  digitalWrite(LEDG, LOW); // turn the LED on
+  digitalWrite(LEDB, LOW); // turn the LED on
 
-  delay(250);               // wait a bit
-  
+  delay(250); // wait a bit
+
   digitalWrite(LEDR, HIGH); // turn the LED off
   delay(250);               // wait a bit
 
@@ -28,22 +29,24 @@ void setup() {
   delay(250);               // wait a bit
 
   // begin initialization
-  if (!gBLESense.init()) {
-      Serial.println(F("starting TouchBlueSensor failed!"));
- 
-    digitalWrite(LEDG, HIGH);    // turn the LED off
-    digitalWrite(LEDB, HIGH);    // turn the LED off
+  if (!gBLESense.init())
+  {
+    Serial.println(F("starting TouchBlueSensor failed!"));
+
+    digitalWrite(LEDG, HIGH); // turn the LED off
+    digitalWrite(LEDB, HIGH); // turn the LED off
     while (1)
     {
-      digitalWrite(LEDR, HIGH);  // turn the LED off
-      delay(500);                // wait a bit
-      digitalWrite(LEDR, LOW);   // turn the LED on
-      delay(500);                // wait a bit
+      digitalWrite(LEDR, HIGH); // turn the LED off
+      delay(500);               // wait a bit
+      digitalWrite(LEDR, LOW);  // turn the LED on
+      delay(500);               // wait a bit
     }
   }
 }
- 
-void loop() {
+
+void loop()
+{
   time_t now = millis();
   time_t dt = now - gLastTime;
   gBLESense.update(dt);

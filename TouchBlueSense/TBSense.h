@@ -1,8 +1,8 @@
 #ifndef _TB_SENSE_H_
 #define _TB_SENSE_H_
 
-#include <LSM6DS3.h>  // accelerometer, gyroscope
-#include <Adafruit_NeoPixel.h>  // WS2812 led strip
+#include <LSM6DS3.h>           // accelerometer, gyroscope
+#include <Adafruit_NeoPixel.h> // WS2812 led strip
 #include <ArduinoBLE.h>
 
 class BLESense
@@ -15,20 +15,25 @@ class BLESense
   static BLEByteCharacteristic brightnessCharacteristic;
   static BLEByteCharacteristic saturationCharacteristic;
 
-public:
-    BLESense();
+  static BLEService accelService;
+  static BLEByteCharacteristic accelRangeCharacteristic;
+  static BLEWordCharacteristic accelBandWidthCharacteristic;
+  static BLEWordCharacteristic accelSampleRateCharacteristic;
 
-    bool init();
-    void update(time_t deltaTime);
+public:
+  BLESense();
+
+  bool init();
+  void update(time_t deltaTime);
 
 private:
-    bool setupBle();
-    bool setupStrip();
-    bool setupSensor();
+  bool setupBle();
+  bool setupStrip();
+  bool setupSensor();
 
-    void updateBle(time_t deltaTime);
-    void updateStrip(time_t deltaTime);
-    void updateSensor(time_t deltaTime);
+  void updateBle(time_t deltaTime);
+  void updateStrip(time_t deltaTime);
+  void updateSensor(time_t deltaTime);
 };
 
 #endif //_TB_SENSE_H_
