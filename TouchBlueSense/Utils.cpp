@@ -53,8 +53,8 @@ void Utils::rgb2hsv_approximate(uint8_t r, uint8_t g, uint8_t b, uint8_t &h, uin
     {
         // we pick hue zero for no special reason
         h = 0;
-        s = 0;
         v = 255 - s;
+        s = 0;
         return;
     }
 
