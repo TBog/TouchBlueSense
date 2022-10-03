@@ -5,12 +5,15 @@
 #include <Adafruit_NeoPixel.h> // WS2812 led strip
 #include <ArduinoBLE.h>
 
+class Animation;
+
 class BLESense
 {
   // we need an instance of class LSM6DS3 to enable tap/touch detection
   static LSM6DS3 gSensor;
   static Adafruit_NeoPixel gLedStrip;
   static BLEService ledService;
+  static BLEByteCharacteristic gameStateCharacteristic;
   static BLEByteCharacteristic switchCharacteristic;
   static BLEByteCharacteristic brightnessCharacteristic;
   static BLEByteCharacteristic saturationCharacteristic;
@@ -19,6 +22,10 @@ class BLESense
   static BLEByteCharacteristic accelRangeCharacteristic;
   static BLEWordCharacteristic accelBandWidthCharacteristic;
   static BLEWordCharacteristic accelSampleRateCharacteristic;
+  static BLEIntCharacteristic tapCountCharacteristic;
+
+  byte mGameState;
+  Animation* m_pGameStateAnim;
 
 public:
   BLESense();
@@ -34,6 +41,8 @@ private:
   void updateBle(time_t deltaTime);
   void updateStrip(time_t deltaTime);
   void updateSensor(time_t deltaTime);
+
+  bool tapDetected();
 };
 
 #endif //_TB_SENSE_H_

@@ -61,11 +61,29 @@ void loop()
     Serial.print(F("FPS "));
     Serial.print(frameCount);
     Serial.print(F(" | time "));
-    Serial.println(countTime);
+    Serial.print(countTime);
+    Serial.print(F(" | SRAM "));
+    Serial.println(freeRam());
 
     countTime = 0;
     frameCount = 0;
   }
 
   gLastTime = now;
+}
+
+//SRAM usage in AVR-based Arduino
+// int freeRam()
+// {
+//   extern int __heap_start, *__brkval;
+//   int v;
+//   return (int)&v - (__brkval == 0
+//                         ? (int)&__heap_start
+//                         : (int)__brkval);
+// }
+
+extern "C" char* sbrk(int incr);
+int freeRam() {
+  char top;
+  return &top - reinterpret_cast<char*>(sbrk(0));
 }

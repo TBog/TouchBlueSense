@@ -1,8 +1,10 @@
 #include "TBSense.h"
+#include "BlinkAnim.h"
 
 LSM6DS3 BLESense::gSensor(I2C_MODE, LSM6DS3_C_ACC_GYRO_WHO_AM_I);
 Adafruit_NeoPixel BLESense::gLedStrip(24 /*number of leds*/, PIN_A0 /*first pin*/, NEO_GRB + NEO_KHZ800);
 BLEService BLESense::ledService("54B10000-5442-6F67-9000-CC505EFFCD37"); // Bluetooth® Low Energy LED Service
+BLEByteCharacteristic BLESense::gameStateCharacteristic("54B10008-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
 BLEByteCharacteristic BLESense::switchCharacteristic("54B10001-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
 BLEByteCharacteristic BLESense::brightnessCharacteristic("54B10002-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
 BLEByteCharacteristic BLESense::saturationCharacteristic("54B10003-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
@@ -10,16 +12,27 @@ BLEService BLESense::accelService("54B20000-5442-6F67-9000-CC505EFFCD37");
 BLEByteCharacteristic BLESense::accelRangeCharacteristic("54B10004-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
 BLEWordCharacteristic BLESense::accelBandWidthCharacteristic("54B10005-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
 BLEWordCharacteristic BLESense::accelSampleRateCharacteristic("54B10006-5442-6F67-9000-CC505EFFCD37", BLERead | BLEWrite);
+BLEIntCharacteristic BLESense::tapCountCharacteristic("54B10007-5442-6F67-9000-CC505EFFCD37", BLERead | BLENotify);
 
 #define ledPin LEDR
 #define int1Pin PIN_LSM6DS3TR_C_INT1
-uint8_t tapCount = 0;     // Amount of received interrupts
-uint8_t prevTapCount = 0; // Interrupt Counter from last loop
+
+// Game State Characteristic
+#define GSC_RAINBOW 255
+#define GSC_TOUCH_NOTHING 0
+#define GSC_TOUCH_READY 1
+#define GSC_TOUCH_ERROR 2
+#define GSC_TOUCH_VALID 3
+#define GSC_TOUCH_COUNTDOWN 4
+
+int tapCount = 0;     // Amount of received interrupts
+int prevTapCount = 0; // Interrupt Counter from last loop
 const byte manufacturerData[] = {0x54, 0x6f, 0x75, 0x63, 0x68, 0x42, 0};
 
 int config_touch_detect(LSM6DS3 &sensor_LSM6DS3);
 
 BLESense::BLESense()
+    : mGameState(GSC_RAINBOW), m_pGameStateAnim(nullptr)
 {
 }
 
@@ -51,20 +64,24 @@ bool BLESense::setupBle()
   }
 
   // set the initial value for the characeristic:
+  gameStateCharacteristic.writeValue(mGameState);
   switchCharacteristic.writeValue(0);
   brightnessCharacteristic.writeValue(0x40);
   saturationCharacteristic.writeValue(0xff);
   accelRangeCharacteristic.writeValue(2);        // 2, 4, 8, 16
   accelBandWidthCharacteristic.writeValue(50);   // 50, 100, 200, 400
   accelSampleRateCharacteristic.writeValue(833); // 13,26,52,104,208,416,833,1660,3330,6660,13330
+  tapCountCharacteristic.writeValue(prevTapCount);
 
   // add the characteristic(s) to the service(s)
+  ledService.addCharacteristic(gameStateCharacteristic);
   ledService.addCharacteristic(switchCharacteristic);
   ledService.addCharacteristic(brightnessCharacteristic);
   ledService.addCharacteristic(saturationCharacteristic);
   accelService.addCharacteristic(accelRangeCharacteristic);
   accelService.addCharacteristic(accelBandWidthCharacteristic);
   accelService.addCharacteristic(accelSampleRateCharacteristic);
+  accelService.addCharacteristic(tapCountCharacteristic);
 
   // add service(s)
   BLE.addService(ledService);
@@ -159,6 +176,11 @@ void BLESense::updateBle(time_t deltaTime)
   {
     digitalWrite(LEDB, HIGH); // turn the LED off
 
+    if (tapDetected())
+    {
+      tapCountCharacteristic.writeValue(tapCount);
+    }
+
     // while the central is still connected to peripheral:
     // while (central.connected()) {
     if (switchCharacteristic.written())
@@ -204,10 +226,59 @@ void BLESense::updateBle(time_t deltaTime)
 
 void BLESense::updateStrip(time_t deltaTime)
 {
-  static uint16_t current_hue = 0;
-  current_hue = current_hue + 43;
-  gLedStrip.rainbow(current_hue, 1, saturationCharacteristic.value(), brightnessCharacteristic.value());
-  gLedStrip.show();
+  const auto gameState = gameStateCharacteristic.value();
+  const bool gameStateChanged = mGameState != gameState;
+  mGameState = gameState;
+
+  // make sure we remove the animation if the game state changed
+  if (m_pGameStateAnim && gameStateChanged)
+  {
+    delete m_pGameStateAnim;
+    m_pGameStateAnim = nullptr;
+  }
+
+  switch (gameState)
+  {
+  case GSC_RAINBOW:
+  {
+    static uint16_t current_hue = 0;
+    current_hue = current_hue + 43;
+    gLedStrip.rainbow(current_hue, 1, saturationCharacteristic.value(), brightnessCharacteristic.value());
+    gLedStrip.show();
+    break;
+  }
+
+  case GSC_TOUCH_ERROR:
+    if (gameStateChanged)
+    {
+      m_pGameStateAnim = new BlinkAnim(0x7f0000);
+    }
+    break;
+
+  case GSC_TOUCH_VALID:
+    if (gameStateChanged)
+    {
+      m_pGameStateAnim = new BlinkAnim(0x007f00);
+    }
+    break;
+
+  case GSC_TOUCH_READY:
+    gLedStrip.fill(0x00007F);
+    gLedStrip.show();
+    break;
+
+  case GSC_TOUCH_NOTHING:
+  default:
+    gLedStrip.clear();
+    gLedStrip.show();
+    break;
+  }
+
+  if (m_pGameStateAnim)
+  {
+    m_pGameStateAnim->update(deltaTime, gLedStrip);
+    gLedStrip.show();
+  }
 }
 
 void BLESense::updateSensor(time_t deltaTime)
@@ -227,6 +298,12 @@ void BLESense::updateSensor(time_t deltaTime)
 
   digitalWrite(LEDG, LOW); // turn green LED on
   timeSinceLastTap = 0;
+}
+
+bool BLESense::tapDetected()
+{
+  int tapDelta = tapCount - prevTapCount;
+  return tapDelta != 0;
 }
 
 // taken from https://forum.seeedstudio.com/t/xiao-ble-sense-lsm6ds3-int1-single-tap-interrupt/264206/6
