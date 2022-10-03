@@ -27,10 +27,25 @@ void LoadingAnim::update(time_t deltaTime, Adafruit_NeoPixel &ledStrip)
         v = mTailLength;
 
     int currPixel = mHead;
+//    Serial.print(F("LoadingAnim "));
+//    Serial.print(F(" r 0x")); Serial.print(r, HEX);
+//    Serial.print(F(" g 0x")); Serial.print(g, HEX);
+//    Serial.print(F(" b 0x")); Serial.print(b, HEX);
+//    Serial.println();
     for (int i = 0; i < mTailLength; i += 1)
     {
-        uint8_t val = v / mTailLength * (mTailLength - i);
-        const auto color = i > 0 ? Adafruit_NeoPixel::ColorHSV(hue, s, v) : mColor;
+//        Serial.print(F(" #")); Serial.print(hue, DEC);
+        
+        uint16_t val = ((uint16_t)v) * (mTailLength - i) / mTailLength;
+        val = val & 0xFF;
+        const auto color = Adafruit_NeoPixel::ColorHSV(hue, s, val);
+
+//        Serial.print(F(" hue ")); Serial.print(hue, DEC);
+//        Serial.print(F(" s ")); Serial.print(s, DEC);
+//        Serial.print(F(" val ")); Serial.print(val, DEC);
+//        Serial.print(F(" | color 0x")); Serial.print(color, HEX);
+//        Serial.println();
+
         ledStrip.setPixelColor(currPixel, color);
         currPixel = (currPixel + 1) % ledStrip.numPixels();
     }

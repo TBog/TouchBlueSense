@@ -34,7 +34,7 @@ const byte manufacturerData[] = {0x54, 0x6f, 0x75, 0x63, 0x68, 0x42, 0};
 int config_touch_detect(LSM6DS3 &sensor_LSM6DS3);
 
 BLESense::BLESense()
-    : mGameState(GSC_RAINBOW), m_pGameStateAnim(nullptr)
+    : mGameState(GSC_LOADING), m_pGameStateAnim(nullptr)
 {
 }
 
@@ -246,22 +246,22 @@ void BLESense::updateStrip(time_t deltaTime)
   }
 
   case GSC_LOADING:
-    if (gameStateChanged)
-      m_pGameStateAnim = new LoadingAnim(0x7f0000);
+    if (!m_pGameStateAnim)
+      m_pGameStateAnim = new LoadingAnim(0x3F3F3F);
     break;
 
   case GSC_TOUCH_ERROR:
-    if (gameStateChanged)
-      m_pGameStateAnim = new BlinkAnim(0x7f0000);
+    if (!m_pGameStateAnim)
+      m_pGameStateAnim = new BlinkAnim(0x3F0000);
     break;
 
   case GSC_TOUCH_VALID:
-    if (gameStateChanged)
-      m_pGameStateAnim = new BlinkAnim(0x007f00);
+    if (!m_pGameStateAnim)
+      m_pGameStateAnim = new BlinkAnim(0x003F00);
     break;
 
   case GSC_TOUCH_READY:
-    gLedStrip.fill(0x00007F);
+    gLedStrip.fill(0x00003F);
     gLedStrip.show();
     break;
 
@@ -290,15 +290,17 @@ void BLESense::updateSensor(time_t deltaTime)
   if (delta == 0)
     return;
   prevTapCount += delta;
-  tapCountCharacteristic.writeValue(tapCount);
 
-  Serial.print(F("Tap detected "));
+  Serial.print(F("Tap(s) detected "));
   Serial.print(delta);
+  Serial.print(F(" | time="));
+  Serial.print(timeSinceLastTap);
   Serial.print(F(" | total count="));
   Serial.println(tapCount);
 
   digitalWrite(LEDG, LOW); // turn green LED on
   timeSinceLastTap = 0;
+  tapCountCharacteristic.writeValue(tapCount);
 }
 
 // taken from https://forum.seeedstudio.com/t/xiao-ble-sense-lsm6ds3-int1-single-tap-interrupt/264206/6
