@@ -1,5 +1,6 @@
 #include "TBSense.h"
 #include "BlinkAnim.h"
+#include "LoadingAnim.h"
 
 LSM6DS3 BLESense::gSensor(I2C_MODE, LSM6DS3_C_ACC_GYRO_WHO_AM_I);
 Adafruit_NeoPixel BLESense::gLedStrip(24 /*number of leds*/, PIN_A0 /*first pin*/, NEO_GRB + NEO_KHZ800);
@@ -19,6 +20,7 @@ BLEIntCharacteristic BLESense::tapCountCharacteristic("54B10007-5442-6F67-9000-C
 
 // Game State Characteristic
 #define GSC_RAINBOW 255
+#define GSC_LOADING 254
 #define GSC_TOUCH_NOTHING 0
 #define GSC_TOUCH_READY 1
 #define GSC_TOUCH_ERROR 2
@@ -176,11 +178,6 @@ void BLESense::updateBle(time_t deltaTime)
   {
     digitalWrite(LEDB, HIGH); // turn the LED off
 
-    if (tapDetected())
-    {
-      tapCountCharacteristic.writeValue(tapCount);
-    }
-
     // while the central is still connected to peripheral:
     // while (central.connected()) {
     if (switchCharacteristic.written())
@@ -248,18 +245,19 @@ void BLESense::updateStrip(time_t deltaTime)
     break;
   }
 
+  case GSC_LOADING:
+    if (gameStateChanged)
+      m_pGameStateAnim = new LoadingAnim(0x7f0000);
+    break;
+
   case GSC_TOUCH_ERROR:
     if (gameStateChanged)
-    {
       m_pGameStateAnim = new BlinkAnim(0x7f0000);
-    }
     break;
 
   case GSC_TOUCH_VALID:
     if (gameStateChanged)
-    {
       m_pGameStateAnim = new BlinkAnim(0x007f00);
-    }
     break;
 
   case GSC_TOUCH_READY:
@@ -292,18 +290,15 @@ void BLESense::updateSensor(time_t deltaTime)
   if (delta == 0)
     return;
   prevTapCount += delta;
+  tapCountCharacteristic.writeValue(tapCount);
 
   Serial.print(F("Tap detected "));
-  Serial.println(delta);
+  Serial.print(delta);
+  Serial.print(F(" | total count="));
+  Serial.println(tapCount);
 
   digitalWrite(LEDG, LOW); // turn green LED on
   timeSinceLastTap = 0;
-}
-
-bool BLESense::tapDetected()
-{
-  int tapDelta = tapCount - prevTapCount;
-  return tapDelta != 0;
 }
 
 // taken from https://forum.seeedstudio.com/t/xiao-ble-sense-lsm6ds3-int1-single-tap-interrupt/264206/6

@@ -12,7 +12,7 @@ class BlinkAnim : public Animation
     bool mIsOn;
 
 public:
-    BlinkAnim(uint32_t color, time_t timeOn = 100, time_t timeOff = 200);
+    BlinkAnim(uint32_t color, time_t timeOn = 60, time_t timeOff = 50);
 
     virtual void update(time_t deltaTime, Adafruit_NeoPixel &ledStrip) override;
 };

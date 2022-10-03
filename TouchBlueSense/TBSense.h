@@ -42,7 +42,6 @@ private:
   void updateStrip(time_t deltaTime);
   void updateSensor(time_t deltaTime);
 
-  bool tapDetected();
 };
 
 #endif //_TB_SENSE_H_
