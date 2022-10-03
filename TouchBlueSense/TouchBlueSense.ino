@@ -43,6 +43,8 @@ void setup()
       delay(500);               // wait a bit
     }
   }
+
+  gLastTime = millis();
 }
 
 void loop()
