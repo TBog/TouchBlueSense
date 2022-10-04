@@ -1,4 +1,5 @@
 {
     "sketch": "TouchBlueSense.ino",
-    "board": "Seeeduino:mbed:xiaonRF52840Sense"
+    "board": "Seeeduino:mbed:xiaonRF52840Sense",
+    "port": "/dev/ttyACM0"
 }

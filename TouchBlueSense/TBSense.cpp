@@ -1,6 +1,7 @@
 #include "TBSense.h"
 #include "BlinkAnim.h"
 #include "LoadingAnim.h"
+#include "Utils.h"
 
 LSM6DS3 BLESense::gSensor(I2C_MODE, LSM6DS3_C_ACC_GYRO_WHO_AM_I);
 Adafruit_NeoPixel BLESense::gLedStrip(24 /*number of leds*/, PIN_A0 /*first pin*/, NEO_GRB + NEO_KHZ800);
@@ -21,6 +22,7 @@ BLEIntCharacteristic BLESense::tapCountCharacteristic("54B10007-5442-6F67-9000-C
 // Game State Characteristic
 #define GSC_RAINBOW 255
 #define GSC_LOADING 254
+#define GSC_TEST_RGB_TO_HSV 253
 #define GSC_TOUCH_NOTHING 0
 #define GSC_TOUCH_READY 1
 #define GSC_TOUCH_ERROR 2
@@ -34,7 +36,7 @@ const byte manufacturerData[] = {0x54, 0x6f, 0x75, 0x63, 0x68, 0x42, 0};
 int config_touch_detect(LSM6DS3 &sensor_LSM6DS3);
 
 BLESense::BLESense()
-    : mGameState(GSC_LOADING), m_pGameStateAnim(nullptr)
+    : mGameState(GSC_TEST_RGB_TO_HSV), m_pGameStateAnim(nullptr)
 {
 }
 
@@ -241,6 +243,51 @@ void BLESense::updateStrip(time_t deltaTime)
     static uint16_t current_hue = 0;
     current_hue = current_hue + 43;
     gLedStrip.rainbow(current_hue, 1, saturationCharacteristic.value(), brightnessCharacteristic.value());
+    gLedStrip.show();
+    break;
+  }
+
+  case GSC_TEST_RGB_TO_HSV:
+  {
+    const auto num = gLedStrip.numPixels();
+    auto maxHue = 65536L;//1530L;
+
+    static uint8_t convType = 0;
+    static time_t timer = 0;
+    timer -= deltaTime;
+    if (timer < 0)
+    {
+      timer = 2000;
+      convType = (convType + 1) % 3;
+    }
+
+    for (uint16_t pixel = 0; pixel < num; pixel += 1)
+    {
+      uint16_t hue = pixel * maxHue / (num - 1);
+      uint32_t color;
+      switch (convType)
+      {
+      case 0:
+      {
+        uint8_t r, g, b;
+        Utils::HsvToRgb(hue, 0xff, 0x3f, r, g, b);
+        color = (((uint32_t)r) << 16) | (((uint32_t)g) << 8) | b;
+        break;
+      }
+      case 1:
+      {
+        uint8_t r, g, b;
+        float h = hue / (float)maxHue * 360.0;
+        Utils::HSVtoRGB(h, 100.0, 25.0, r, g, b);
+        color = (((uint32_t)r) << 16) | (((uint32_t)g) << 8) | b;
+        break;
+      }
+      case 2:
+        color = Adafruit_NeoPixel::ColorHSV(hue, 0xff, 0x3f);
+        break;
+      }
+      gLedStrip.setPixelColor(pixel, color);
+    }
     gLedStrip.show();
     break;
   }
