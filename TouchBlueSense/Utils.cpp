@@ -219,3 +219,85 @@ void Utils::rgb2hsv_approximate(uint8_t r, uint8_t g, uint8_t b, uint8_t &h, uin
 
     h += 1;
 }
+
+void Utils::HsvToRgb(uint16_t h, uint8_t s, uint8_t v, uint8_t &r, uint8_t &g, uint8_t &b)
+{
+    unsigned char region, remainder, p, q, t;
+    
+    if (s == 0)
+    {
+        r = v;
+        g = v;
+        b = v;
+        return;
+    }
+    
+    // Remap 0-65535 to 0-1529. Pure red is CENTERED on the 64K rollover;
+    // 0 is not the start of pure red, but the midpoint...a few values above
+    // zero and a few below 65536 all yield pure red (similarly, 32768 is the
+    // midpoint, not start, of pure cyan). The 8-bit RGB hexcone (256 values
+    // each for red, green, blue) really only allows for 1530 distinct hues
+    // (not 1536, more on that below), but the full unsigned 16-bit type was
+    // chosen for hue so that one's code can easily handle a contiguous color
+    // wheel by allowing hue to roll over in either direction.
+    h = (h * 1530L + 32768) / 65536;
+
+    region = h / 255;//region = h / 43;
+    remainder = (h - (region * 255)) * 6;//remainder = (h - (region * 43)) * 6;
+    
+    p = (v * (255 - s)) >> 8;
+    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+    
+    switch (region)
+    {
+        case 0:
+            r = v; g = t; b = p;
+            break;
+        case 1:
+            r = q; g = v; b = p;
+            break;
+        case 2:
+            r = p; g = v; b = t;
+            break;
+        case 3:
+            r = p; g = q; b = v;
+            break;
+        case 4:
+            r = t; g = p; b = v;
+            break;
+        default:
+            r = v; g = p; b = q;
+            break;
+    }
+}
+
+void Utils::RgbToHsv(uint8_t r, uint8_t g, uint8_t b, uint16_t &h, uint8_t &s, uint8_t &v)
+{
+    uint8_t rgbMin, rgbMax;
+
+    rgbMin = r < g ? (r < b ? r : b) : (g < b ? g : b);
+    rgbMax = r > g ? (r > b ? r : b) : (g > b ? g : b);
+    
+    v = rgbMax;
+    if (v == 0)
+    {
+        h = 0;
+        s = 0;
+        return;
+    }
+
+    s = 255 * long(rgbMax - rgbMin) / v;
+    if (s == 0)
+    {
+        h = 0;
+        return;
+    }
+
+    if (rgbMax == r)
+        h = 0 + 255 * (g - b) / (rgbMax - rgbMin);//h = 0 + 43 * (g - b) / (rgbMax - rgbMin);
+    else if (rgbMax == g)
+        h = 510 + 255 * (b - r) / (rgbMax - rgbMin);//h = 85 + 43 * (b - r) / (rgbMax - rgbMin);
+    else
+        h = 1020 + 255 * (r - g) / (rgbMax - rgbMin);//h = 171 + 43 * (r - g) / (rgbMax - rgbMin);
+}
