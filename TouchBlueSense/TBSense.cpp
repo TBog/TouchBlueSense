@@ -247,7 +247,7 @@ void BLESense::updateStrip(time_t deltaTime)
 
   case GSC_LOADING:
     if (!m_pGameStateAnim)
-      m_pGameStateAnim = new LoadingAnim(0x3F3F3F);
+      m_pGameStateAnim = new LoadingAnim(0x3F3F00);
     break;
 
   case GSC_TOUCH_ERROR:
